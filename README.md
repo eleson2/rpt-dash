@@ -1,4 +1,4 @@
-# rpt-dash
+# rpt-dash 
 
 A reporting dashboard and analysis tool built on top of **DuckDB**, served in the browser
 with a Node/TypeScript server that owns the database connection.
