@@ -111,12 +111,22 @@ export type PredefinedControl =
   | { name: string; label: string; type: "date"; defaultKey?: string }
   | { name: string; label: string; type: "datetime"; defaultKey?: string };
 
+/** Declarative time-hierarchy descriptor (mirror of the server type). */
+export interface DrilldownSpec {
+  fromParam: string;
+  toParam: string;
+  granularityParam: string;
+  // Ordered COARSE → FINE; `value` matches a granularity option, bucketMs = bucket width.
+  ladder: { value: string; bucketMs: number }[];
+}
+
 export interface PredefinedReportMeta {
   id: string;
   title: string;
   description: string;
   chart: "stacked-area" | "line" | "bar";
   controls: PredefinedControl[];
+  drilldown?: DrilldownSpec;
 }
 
 export interface ReportOptions {

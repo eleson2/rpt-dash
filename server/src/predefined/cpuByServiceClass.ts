@@ -84,6 +84,20 @@ export const cpuByServiceClass: PredefinedReport = {
     { name: "granularity", label: "Granularity", type: "single", optionsKey: "granularities", default: DEFAULT_GRANULARITY },
     { name: "serviceClasses", label: "Service classes (shown individually)", type: "multi", optionsKey: "serviceClasses" },
   ],
+  // Time hierarchy (coarse → fine); `value`s mirror GRANULARITIES so the ladder
+  // and the Granularity dropdown agree.
+  drilldown: {
+    fromParam: "from",
+    toParam: "to",
+    granularityParam: "granularity",
+    ladder: [
+      { value: "1 day", bucketMs: 86_400_000 },
+      { value: "1 hour", bucketMs: 3_600_000 },
+      { value: "15 minutes", bucketMs: 900_000 },
+      { value: "5 minutes", bucketMs: 300_000 },
+      { value: "1 minute", bucketMs: 60_000 },
+    ],
+  },
 
   async options() {
     requireView(VIEW, Object.values(COL));

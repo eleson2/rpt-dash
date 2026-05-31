@@ -17,12 +17,27 @@ export interface ReportOutput {
   unit?: string;
 }
 
+/**
+ * Declarative time-hierarchy descriptor. When present, the chart becomes
+ * drillable: clicking a time bucket re-runs the report narrowed to that bucket
+ * at the next finer granularity. Purely metadata — drilling reuses run().
+ */
+export interface DrilldownSpec {
+  fromParam: string; // control name holding the lower time bound
+  toParam: string; // control name holding the upper time bound
+  granularityParam: string; // control name holding the bucket width
+  // Ordered COARSE → FINE; `value` matches a granularity option, bucketMs = bucket width.
+  ladder: { value: string; bucketMs: number }[];
+}
+
 export interface PredefinedReport {
   id: string;
   title: string;
   description: string;
   chart: ReportOutput["chart"];
   controls: Control[];
+  /** Optional time-drilldown descriptor; omit for non-drillable reports. */
+  drilldown?: DrilldownSpec;
   /** Dynamic option lists keyed by control.optionsKey (e.g. lpars, serviceClasses, minDate). */
   options(): Promise<Record<string, unknown>>;
   /** Validate params, build safe SQL, return chart-ready data. */
@@ -36,8 +51,16 @@ export interface ReportMeta {
   description: string;
   chart: ReportOutput["chart"];
   controls: Control[];
+  drilldown?: DrilldownSpec;
 }
 
 export function toMeta(r: PredefinedReport): ReportMeta {
-  return { id: r.id, title: r.title, description: r.description, chart: r.chart, controls: r.controls };
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    chart: r.chart,
+    controls: r.controls,
+    drilldown: r.drilldown,
+  };
 }

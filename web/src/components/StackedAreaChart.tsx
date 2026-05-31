@@ -3,14 +3,30 @@ import * as echarts from "echarts";
 import type { ReportOutput } from "../api/types";
 
 /** Renders a ReportOutput as a stacked area (or line/bar) chart. */
-export function StackedAreaChart({ output, height = 380 }: { output: ReportOutput; height?: number }) {
+export function StackedAreaChart({
+  output,
+  height = 380,
+  onPointClick,
+}: {
+  output: ReportOutput;
+  height?: number;
+  /** Fired when a data point is clicked; enables drilldown when provided. */
+  onPointClick?: (p: { category: string; series: string }) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
+  // Keep the latest handler in a ref so the click listener (bound once) always
+  // calls the current closure without re-binding.
+  const clickRef = useRef(onPointClick);
+  clickRef.current = onPointClick;
 
   useEffect(() => {
     if (!ref.current) return;
     const chart = echarts.init(ref.current);
     chartRef.current = chart;
+    chart.on("click", (e: { name?: unknown; seriesName?: unknown }) => {
+      clickRef.current?.({ category: String(e.name ?? ""), series: String(e.seriesName ?? "") });
+    });
     const onResize = () => chart.resize();
     window.addEventListener("resize", onResize);
     return () => {

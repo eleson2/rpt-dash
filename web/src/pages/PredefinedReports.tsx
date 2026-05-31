@@ -1,10 +1,57 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { PredefinedControl, PredefinedReportMeta, ReportOptions } from "../api/types";
+import type {
+  DrilldownSpec,
+  PredefinedControl,
+  PredefinedReportMeta,
+  ReportOptions,
+} from "../api/types";
 import { StackedAreaChart } from "../components/StackedAreaChart";
 
 type Params = Record<string, unknown>;
+
+/** One level of the drill path: a clickable label + the params that produced it. */
+type Crumb = { label: string; params: Params };
+
+/** Parse a wall-clock category label ("YYYY-MM-DD HH:mm:ss") to a Date (local). */
+function parseCategory(category: string): Date | null {
+  const d = new Date(category.replace(" ", "T"));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/** Format a Date as a wall-clock "YYYY-MM-DD HH:mm:ss" bound for the server. */
+function toBound(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ` +
+    `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+  );
+}
+
+/**
+ * Compute the params for drilling into a clicked time bucket: narrow the
+ * from/to window to that bucket and step the granularity one level finer
+ * (staying put if already finest). Returns null if the report isn't drillable
+ * or the click can't be interpreted as a time bucket.
+ */
+function drillParams(spec: DrilldownSpec, params: Params, category: string): Params | null {
+  const start = parseCategory(category);
+  if (!start) return null;
+  const current = String(params[spec.granularityParam] ?? "");
+  const i = spec.ladder.findIndex((l) => l.value === current);
+  const level = i < 0 ? undefined : spec.ladder[i];
+  if (!level) return null;
+  const end = new Date(start.getTime() + level.bucketMs);
+  const next = (spec.ladder[Math.min(i + 1, spec.ladder.length - 1)] ?? level).value;
+  return {
+    ...params,
+    [spec.fromParam]: toBound(start),
+    // Exclusive upper bound: server compares `ts <= $to` at second precision.
+    [spec.toParam]: toBound(new Date(end.getTime() - 1000)),
+    [spec.granularityParam]: next,
+  };
+}
 
 function optList(options: ReportOptions | undefined, key: string): string[] {
   const v = options?.[key];
@@ -48,15 +95,45 @@ export function PredefinedReports() {
   });
 
   const [params, setParams] = useState<Params>({});
+  // Drill path; the first crumb is the root (controls as run by the user).
+  const [crumbs, setCrumbs] = useState<Crumb[]>([]);
 
   // Seed defaults once options arrive (or the selected report changes).
   useEffect(() => {
-    if (report && options.data) setParams(defaultsFor(report, options.data));
+    if (report && options.data) {
+      setParams(defaultsFor(report, options.data));
+      setCrumbs([]);
+    }
   }, [report?.id, options.data]);
 
   const run = useMutation({
-    mutationFn: () => api.runPredefined(activeId, params),
+    mutationFn: (p: Params) => api.runPredefined(activeId, p),
   });
+
+  // Run the report from the controls as a fresh root (clears any drill path).
+  const runRoot = () => {
+    setCrumbs([{ label: "All", params }]);
+    run.mutate(params);
+  };
+
+  // Drill into a clicked time bucket: narrow + step finer, grow the breadcrumb.
+  const drill = (category: string) => {
+    if (!report?.drilldown) return;
+    const next = drillParams(report.drilldown, params, category);
+    if (!next) return;
+    setParams(next);
+    setCrumbs((c) => [...(c.length ? c : [{ label: "All", params }]), { label: category, params: next }]);
+    run.mutate(next);
+  };
+
+  // Jump back to an earlier drill level: restore its params, drop trailing crumbs.
+  const goToCrumb = (index: number) => {
+    const target = crumbs[index];
+    if (!target) return;
+    setParams(target.params);
+    setCrumbs((c) => c.slice(0, index + 1));
+    run.mutate(target.params);
+  };
 
   if (reports.isLoading) return <div className="muted">Loading reports…</div>;
   if (!report) return <div className="muted">No predefined reports available.</div>;
@@ -95,17 +172,36 @@ export function PredefinedReports() {
           ))}
         </div>
 
-        <button onClick={() => run.mutate()} disabled={!options.data || run.isPending}>
+        <button onClick={runRoot} disabled={!options.data || run.isPending}>
           {run.isPending ? "Running…" : "Run report"}
         </button>
         {run.isError && <div className="error">{(run.error as Error).message}</div>}
 
         {run.data && (
           <div className="preview-block">
+            {report.drilldown && crumbs.length > 1 && (
+              <nav className="breadcrumbs muted small">
+                {crumbs.map((c, i) => (
+                  <span key={i}>
+                    {i > 0 && " › "}
+                    {i < crumbs.length - 1 ? (
+                      <button className="link" onClick={() => goToCrumb(i)}>
+                        {c.label}
+                      </button>
+                    ) : (
+                      <span className="current">{c.label}</span>
+                    )}
+                  </span>
+                ))}
+              </nav>
+            )}
             {run.data.series.length === 0 ? (
               <div className="muted">No data for the selected filters.</div>
             ) : (
-              <StackedAreaChart output={run.data} />
+              <StackedAreaChart
+                output={run.data}
+                onPointClick={report.drilldown ? (p) => drill(p.category) : undefined}
+              />
             )}
           </div>
         )}

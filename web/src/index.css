@@ -198,6 +198,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 button.link { background: transparent; color: var(--accent); padding: 4px 6px; }
 button.link.danger { color: var(--danger); }
 
+.breadcrumbs { margin-bottom: 8px; display: flex; flex-wrap: wrap; align-items: center; }
+.breadcrumbs button.link { padding: 0; }
+.breadcrumbs .current { color: var(--text); }
+
 .badge {
   background: #232733;
   border-radius: 4px;
