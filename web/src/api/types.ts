@@ -105,6 +105,35 @@ export interface ReportSpec {
   viz: Viz;
 }
 
+export type PredefinedControl =
+  | { name: string; label: string; type: "single"; optionsKey: string; required?: boolean }
+  | { name: string; label: string; type: "multi"; optionsKey: string }
+  | { name: string; label: string; type: "date"; defaultKey?: string };
+
+export interface PredefinedReportMeta {
+  id: string;
+  title: string;
+  description: string;
+  chart: "stacked-area" | "line" | "bar";
+  controls: PredefinedControl[];
+}
+
+export interface ReportOptions {
+  [key: string]: unknown;
+}
+
+export interface StackedSeries {
+  name: string;
+  data: number[];
+}
+
+export interface ReportOutput {
+  chart: "stacked-area" | "line" | "bar";
+  categories: string[];
+  series: StackedSeries[];
+  unit?: string;
+}
+
 export type Role = "admin" | "viewer";
 
 export interface AuthUser {

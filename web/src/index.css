@@ -117,6 +117,24 @@ body {
 }
 .builder-group .card-head { margin-bottom: 4px; }
 
+.report-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 12px 0 16px;
+}
+.multi-control { display: flex; flex-direction: column; gap: 6px; }
+.checkbox-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  max-width: 460px;
+}
+.checkbox-row label.inline { color: var(--text); gap: 5px; }
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);

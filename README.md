@@ -18,6 +18,12 @@ tiles → render charts/tables in the browser. Access is now gated by login.
   measures → filters → chart). The server turns the structured spec into safe SQL — columns are
   validated against the dataset catalog and values are bound as parameters; the browser never
   sends SQL. Saved reports become regular (visual) metrics, usable on dashboards.
+- **Predefined parameterized reports** (Reports tab): server-registered reports with rich,
+  guided controls and a Run button. First one — *CPU usage per service class*: a stacked-area
+  chart for one LPAR over a date range, where you choose which service classes to show
+  individually and the rest are summed into an "Other" band on top. Add the sample with the
+  `Datasets` tab (upload `sample-data/cpu_by_service_class.csv`, view name `cpu_by_service_class`;
+  regenerate via `node sample-data/gen-cpu.mjs`). New reports are added in `server/src/predefined/`.
 
 ## Auth
 

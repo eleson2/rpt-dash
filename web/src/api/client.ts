@@ -7,7 +7,10 @@ import type {
   Metric,
   MetricInput,
   ParamDef,
+  PredefinedReportMeta,
   PreviewResult,
+  ReportOptions,
+  ReportOutput,
   ReportSpec,
   RunResult,
   Viz,
@@ -82,6 +85,17 @@ export const api = {
     http<Metric>("/api/reports", {
       method: "POST",
       body: JSON.stringify({ name, description, spec }),
+    }),
+
+  listPredefined: () =>
+    http<{ reports: PredefinedReportMeta[] }>("/api/predefined").then((r) => r.reports),
+
+  predefinedOptions: (id: string) => http<ReportOptions>(`/api/predefined/${id}/options`),
+
+  runPredefined: (id: string, params: Record<string, unknown>) =>
+    http<ReportOutput>(`/api/predefined/${id}/run`, {
+      method: "POST",
+      body: JSON.stringify({ params }),
     }),
 
   me: () => http<AuthState>("/api/auth/me"),
