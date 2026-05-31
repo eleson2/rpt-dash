@@ -106,7 +106,7 @@ export interface ReportSpec {
 }
 
 export type PredefinedControl =
-  | { name: string; label: string; type: "single"; optionsKey: string; required?: boolean }
+  | { name: string; label: string; type: "single"; optionsKey: string; required?: boolean; default?: string }
   | { name: string; label: string; type: "multi"; optionsKey: string }
   | { name: string; label: string; type: "date"; defaultKey?: string };
 

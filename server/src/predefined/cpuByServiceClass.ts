@@ -10,10 +10,24 @@ const COL = { ts: "ts", lpar: "lpar", serviceClass: "service_class", cpu: "cpu" 
 
 const OTHER = "Other";
 
+// Allowed time-bucket widths (server-side allowlist → safe to inline as an
+// INTERVAL literal; never user free-text). Keys are also the UI labels.
+const GRANULARITIES = {
+  "1 minute": "1 minute",
+  "5 minutes": "5 minutes",
+  "15 minutes": "15 minutes",
+  "1 hour": "1 hour",
+  "1 day": "1 day",
+} as const;
+type Granularity = keyof typeof GRANULARITIES;
+const GRANULARITY_KEYS = Object.keys(GRANULARITIES) as [Granularity, ...Granularity[]];
+const DEFAULT_GRANULARITY: Granularity = "1 hour";
+
 const paramsSchema = z.object({
   lpar: z.string().min(1),
   from: z.string().min(1),
   to: z.string().min(1),
+  granularity: z.enum(GRANULARITY_KEYS).default(DEFAULT_GRANULARITY),
   // Service classes to show individually; the rest are summed into "Other".
   serviceClasses: z.array(z.string()).default([]),
 });
@@ -64,6 +78,7 @@ export const cpuByServiceClass: PredefinedReport = {
     { name: "lpar", label: "LPAR", type: "single", optionsKey: "lpars", required: true },
     { name: "from", label: "From", type: "date", defaultKey: "minDate" },
     { name: "to", label: "To", type: "date", defaultKey: "maxDate" },
+    { name: "granularity", label: "Granularity", type: "single", optionsKey: "granularities", default: DEFAULT_GRANULARITY },
     { name: "serviceClasses", label: "Service classes (shown individually)", type: "multi", optionsKey: "serviceClasses" },
   ],
 
@@ -84,6 +99,7 @@ export const cpuByServiceClass: PredefinedReport = {
     return {
       lpars,
       serviceClasses,
+      granularities: Object.keys(GRANULARITIES),
       minDate: range?.lo ?? null,
       maxDate: range?.hi ?? null,
     };
@@ -112,10 +128,20 @@ export const cpuByServiceClass: PredefinedReport = {
       seriesExpr = `CASE WHEN "${COL.serviceClass}" IN (${keys.join(", ")}) THEN "${COL.serviceClass}" ELSE '${OTHER}' END`;
     }
 
+    // Bucket width is from the server-side allowlist, so inlining the INTERVAL
+    // literal is safe. Value is the average over the bucket: total CPU divided
+    // by the number of distinct source timestamps it covers. This equals the
+    // raw value when the bucket matches the sample resolution, and correctly
+    // averages (rather than sums) when down-sampling to a coarser granularity —
+    // for both individual classes and the summed "Other" band.
+    const interval = GRANULARITIES[p.granularity];
+    const bucket = `time_bucket(INTERVAL '${interval}', CAST("${COL.ts}" AS TIMESTAMP))`;
+
     const sql = `
-      SELECT CAST("${COL.ts}" AS TIMESTAMP) AS t,
+      SELECT ${bucket} AS t,
              ${seriesExpr} AS series,
-             sum(CAST("${COL.cpu}" AS DOUBLE)) AS v
+             sum(CAST("${COL.cpu}" AS DOUBLE))
+               / count(DISTINCT CAST("${COL.ts}" AS TIMESTAMP)) AS v
       FROM "${VIEW}"
       WHERE "${COL.lpar}" = $lpar
         AND CAST("${COL.ts}" AS TIMESTAMP) >= $from

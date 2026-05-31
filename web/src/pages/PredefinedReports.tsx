@@ -15,7 +15,10 @@ function optList(options: ReportOptions | undefined, key: string): string[] {
 function defaultsFor(report: PredefinedReportMeta, options: ReportOptions): Params {
   const p: Params = {};
   for (const c of report.controls) {
-    if (c.type === "single") p[c.name] = optList(options, c.optionsKey)[0] ?? "";
+    if (c.type === "single") {
+      const opts = optList(options, c.optionsKey);
+      p[c.name] = c.default && opts.includes(c.default) ? c.default : opts[0] ?? "";
+    }
     else if (c.type === "multi") p[c.name] = [];
     else if (c.type === "date") p[c.name] = (c.defaultKey ? options[c.defaultKey] : "") ?? "";
   }
