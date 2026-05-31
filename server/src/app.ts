@@ -8,6 +8,7 @@ import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { config } from "./config.js";
 import "./db/metadata.js"; // initialize schema on startup
+import { discoverParquet } from "./ingest/discover.js";
 import { authRoutes } from "./auth/routes.js";
 import { createUser, getUserByName, pruneSessions, userCount } from "./auth/store.js";
 import { datasetRoutes } from "./routes/datasets.js";
@@ -42,6 +43,18 @@ export async function buildApp() {
   pruneSessions();
   const seeded = bootstrapAdminFromEnv();
   if (seeded) app.log.info(`Seeded admin user "${seeded}" from environment.`);
+
+  // Auto-register parquet files from the configured root directory so end users
+  // never deal with uploads or storage format. Errors are logged, not fatal.
+  if (config.parquetDir) {
+    try {
+      const { registered, errors } = await discoverParquet(config.parquetDir);
+      app.log.info(`Auto-registered ${registered.length} parquet dataset(s) from ${config.parquetDir}.`);
+      for (const e of errors) app.log.warn(`Skipped ${e.path}: ${e.error}`);
+    } catch (err) {
+      app.log.error(err, "Parquet auto-discovery failed");
+    }
+  }
 
   app.get("/api/health", async () => ({ ok: true }));
 

@@ -23,6 +23,9 @@ staging/
 .env.*
 !.env.example
 
+# Local config file (use rpt-dash.config.example.json as a template)
+rpt-dash.config.json
+
 # Logs
 *.log
 npm-debug.log*
