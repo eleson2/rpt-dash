@@ -32,12 +32,15 @@ const paramsSchema = z.object({
   serviceClasses: z.array(z.string()).default([]),
 });
 
-/** A bare date (YYYY-MM-DD) is widened to cover the whole day. */
-function startOfDay(v: string): string {
-  return /^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v} 00:00:00` : v;
-}
-function endOfDay(v: string): string {
-  return /^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v} 23:59:59` : v;
+/**
+ * Normalize a date/datetime bound for DuckDB. Accepts a bare date
+ * (YYYY-MM-DD), which is widened to the start/end of that day, or a datetime
+ * (with a "T" or space separator, minute precision), which is used as-is.
+ */
+function normalizeBound(v: string, isEnd: boolean): string {
+  const s = v.replace("T", " ").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return isEnd ? `${s} 23:59:59` : `${s} 00:00:00`;
+  return s;
 }
 
 /** Long-form rows {t, series, v} → stacked categories + series, "Other" on top. */
@@ -76,8 +79,8 @@ export const cpuByServiceClass: PredefinedReport = {
   chart: "stacked-area",
   controls: [
     { name: "lpar", label: "LPAR", type: "single", optionsKey: "lpars", required: true },
-    { name: "from", label: "From", type: "date", defaultKey: "minDate" },
-    { name: "to", label: "To", type: "date", defaultKey: "maxDate" },
+    { name: "from", label: "From", type: "datetime", defaultKey: "minTs" },
+    { name: "to", label: "To", type: "datetime", defaultKey: "maxTs" },
     { name: "granularity", label: "Granularity", type: "single", optionsKey: "granularities", default: DEFAULT_GRANULARITY },
     { name: "serviceClasses", label: "Service classes (shown individually)", type: "multi", optionsKey: "serviceClasses" },
   ],
@@ -93,15 +96,17 @@ export const cpuByServiceClass: PredefinedReport = {
     ).rows.map((r) => String(r.v));
     const range = (
       await q(
-        `SELECT min(CAST("${COL.ts}" AS DATE)) AS lo, max(CAST("${COL.ts}" AS DATE)) AS hi FROM "${VIEW}"`,
+        `SELECT min(CAST("${COL.ts}" AS TIMESTAMP)) AS lo,
+                max(CAST("${COL.ts}" AS TIMESTAMP)) AS hi
+         FROM "${VIEW}"`,
       )
     ).rows[0];
     return {
       lpars,
       serviceClasses,
       granularities: Object.keys(GRANULARITIES),
-      minDate: range?.lo ?? null,
-      maxDate: range?.hi ?? null,
+      minTs: range?.lo ?? null,
+      maxTs: range?.hi ?? null,
     };
   },
 
@@ -112,8 +117,8 @@ export const cpuByServiceClass: PredefinedReport = {
     // Bind every literal as a parameter; identifiers come from the fixed COL map.
     const params: Record<string, unknown> = {
       lpar: p.lpar,
-      from: startOfDay(p.from),
-      to: endOfDay(p.to),
+      from: normalizeBound(p.from, false),
+      to: normalizeBound(p.to, true),
     };
 
     // Bucketing expression: selected classes map to themselves, others to 'Other'.

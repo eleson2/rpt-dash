@@ -11,6 +11,14 @@ function optList(options: ReportOptions | undefined, key: string): string[] {
   return Array.isArray(v) ? v.map(String) : [];
 }
 
+/** Format a date/datetime value for an <input type="datetime-local"> (YYYY-MM-DDTHH:mm). */
+function toDateTimeLocal(v: unknown): string {
+  if (!v) return "";
+  const s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return `${s}T00:00`;
+  return s.replace(" ", "T").slice(0, 16);
+}
+
 /** Build default param values from a report's controls + its option lists. */
 function defaultsFor(report: PredefinedReportMeta, options: ReportOptions): Params {
   const p: Params = {};
@@ -21,6 +29,7 @@ function defaultsFor(report: PredefinedReportMeta, options: ReportOptions): Para
     }
     else if (c.type === "multi") p[c.name] = [];
     else if (c.type === "date") p[c.name] = (c.defaultKey ? options[c.defaultKey] : "") ?? "";
+    else if (c.type === "datetime") p[c.name] = toDateTimeLocal(c.defaultKey ? options[c.defaultKey] : "");
   }
   return p;
 }
@@ -137,6 +146,19 @@ function Control({
       <label>
         {control.label}
         <input type="date" value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />
+      </label>
+    );
+  }
+
+  if (control.type === "datetime") {
+    return (
+      <label>
+        {control.label}
+        <input
+          type="datetime-local"
+          value={String(value ?? "")}
+          onChange={(e) => onChange(e.target.value)}
+        />
       </label>
     );
   }
