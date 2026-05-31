@@ -55,3 +55,20 @@ meta.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+
+/** Add a column to a table if it does not already exist (lightweight migration). */
+function addColumnIfMissing(table: string, column: string, ddl: string) {
+  const cols = meta.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) {
+    meta.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+  }
+}
+
+// Visual reports are stored as metrics with kind='visual' and a structured spec
+// (so they can be re-edited without parsing SQL). 'sql' metrics leave spec NULL.
+addColumnIfMissing("metrics", "kind", "kind TEXT NOT NULL DEFAULT 'sql'");
+addColumnIfMissing("metrics", "spec", "spec TEXT");
+addColumnIfMissing("metrics", "owner_id", "owner_id TEXT");
+// Server-side bound values for a metric's baked-in placeholders (e.g. a visual
+// report's filter values). Supplied to the query on every run; not user-facing.
+addColumnIfMissing("metrics", "fixed_params", "fixed_params TEXT NOT NULL DEFAULT '{}'");

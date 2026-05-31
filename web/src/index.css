@@ -108,6 +108,15 @@ body {
   border-radius: 8px;
 }
 
+.builder-group {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: #14171d;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.builder-group .card-head { margin-bottom: 4px; }
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);

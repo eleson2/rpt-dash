@@ -26,8 +26,9 @@ export async function runMetric(
 
   const values = paramValuesSchema(metric.params).parse(rawParams ?? {});
 
-  // Convert validated values into plain JS for the binder (Date stays a Date).
-  const bound: Record<string, unknown> = {};
+  // Start from server-bound fixed params (e.g. a visual report's filter values),
+  // then layer in validated user-supplied params.
+  const bound: Record<string, unknown> = { ...(metric.fixedParams ?? {}) };
   for (const p of metric.params) {
     if (p.name in values) bound[p.name] = (values as Record<string, unknown>)[p.name];
   }
@@ -37,7 +38,7 @@ export async function runMetric(
   const cap = config.maxRows;
   const wrapped = `SELECT * FROM (${metric.sql}) AS _m LIMIT ${cap + 1}`;
 
-  const result = await runQuery(wrapped, metric.params.length ? bound : undefined);
+  const result = await runQuery(wrapped, Object.keys(bound).length ? bound : undefined);
 
   const truncated = result.rows.length > cap;
   if (truncated) result.rows.length = cap;

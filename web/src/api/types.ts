@@ -78,6 +78,33 @@ export interface DashboardInput {
   layout: DashboardTile[];
 }
 
+export type Transform = "none" | "year" | "month" | "day";
+export type Agg = "count" | "sum" | "avg" | "min" | "max";
+export type FilterOp = "=" | "!=" | ">" | ">=" | "<" | "<=" | "in" | "contains";
+
+export interface Dimension {
+  column: string;
+  transform: Transform;
+}
+export interface Measure {
+  agg: Agg;
+  column?: string;
+}
+export interface ReportFilter {
+  column: string;
+  op: FilterOp;
+  value: string | number | boolean | (string | number)[];
+}
+export interface ReportSpec {
+  dataset: string;
+  dimensions: Dimension[];
+  measures: Measure[];
+  filters: ReportFilter[];
+  orderBy?: { ref: string; dir: "asc" | "desc" };
+  limit?: number;
+  viz: Viz;
+}
+
 export type Role = "admin" | "viewer";
 
 export interface AuthUser {

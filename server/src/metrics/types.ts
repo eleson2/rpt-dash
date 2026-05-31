@@ -29,6 +29,13 @@ export type MetricInput = z.infer<typeof metricInputSchema>;
 
 export interface Metric extends MetricInput {
   id: string;
+  /** 'sql' = hand-written SQL metric; 'visual' = built from a structured report spec. */
+  kind: "sql" | "visual";
+  /** Structured report spec for visual metrics (JSON), else null. */
+  spec: unknown | null;
+  /** Server-bound values for baked-in placeholders (visual report filters). */
+  fixedParams: Record<string, unknown>;
+  ownerId: string | null;
   createdAt: string;
   updatedAt: string;
 }

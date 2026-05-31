@@ -12,8 +12,12 @@ tiles → render charts/tables in the browser. Access is now gated by login.
 - **Phase 1:** ingest → view → metric → chart vertical slice.
 - **Phase 2:** dashboard composer + dashboard-driven view, metric preview, bounded read
   connection pool, and per-query timeout (interrupt).
-- **Phase 3:** session-cookie auth with roles. Admins author metrics/dashboards/datasets;
-  viewers can only view dashboards and run metrics. Passwords hashed with Node `scrypt`.
+- **Phase 3:** session-cookie auth with roles. Admins author SQL metrics/dashboards/datasets;
+  viewers can view dashboards, run metrics, and build no-code reports. Passwords hashed with `scrypt`.
+- **No-code reports:** any logged-in user builds a report visually (dataset → group-by →
+  measures → filters → chart). The server turns the structured spec into safe SQL — columns are
+  validated against the dataset catalog and values are bound as parameters; the browser never
+  sends SQL. Saved reports become regular (visual) metrics, usable on dashboards.
 
 ## Auth
 

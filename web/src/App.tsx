@@ -5,14 +5,16 @@ import { Dashboard } from "./pages/Dashboard";
 import { DashboardComposer } from "./pages/DashboardComposer";
 import { Ingest } from "./pages/Ingest";
 import { MetricBuilder } from "./pages/MetricBuilder";
+import { ReportBuilder } from "./pages/ReportBuilder";
 import { Login } from "./pages/Login";
 
-type Tab = "dashboard" | "compose" | "metrics" | "ingest";
+type Tab = "dashboard" | "report" | "compose" | "metrics" | "ingest";
 
 const TABS: { id: Tab; label: string; adminOnly: boolean }[] = [
   { id: "dashboard", label: "Dashboard", adminOnly: false },
+  { id: "report", label: "New report", adminOnly: false },
   { id: "compose", label: "Compose", adminOnly: true },
-  { id: "metrics", label: "Metric builder", adminOnly: true },
+  { id: "metrics", label: "SQL metric", adminOnly: true },
   { id: "ingest", label: "Datasets", adminOnly: true },
 ];
 
@@ -61,6 +63,7 @@ export default function App() {
       </header>
       <main className="content">
         {activeTab === "dashboard" && <Dashboard />}
+        {activeTab === "report" && <ReportBuilder />}
         {activeTab === "compose" && isAdmin && <DashboardComposer />}
         {activeTab === "metrics" && isAdmin && <MetricBuilder />}
         {activeTab === "ingest" && isAdmin && <Ingest />}

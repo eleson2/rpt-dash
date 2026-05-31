@@ -8,7 +8,9 @@ import type {
   MetricInput,
   ParamDef,
   PreviewResult,
+  ReportSpec,
   RunResult,
+  Viz,
 } from "./types";
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
@@ -69,6 +71,18 @@ export const api = {
     http<Dashboard>(`/api/dashboards/${id}`, { method: "PUT", body: JSON.stringify(input) }),
 
   deleteDashboard: (id: string) => http<void>(`/api/dashboards/${id}`, { method: "DELETE" }),
+
+  previewReport: (spec: ReportSpec) =>
+    http<PreviewResult & { viz: Viz }>("/api/reports/preview", {
+      method: "POST",
+      body: JSON.stringify(spec),
+    }),
+
+  createReport: (name: string, spec: ReportSpec, description?: string) =>
+    http<Metric>("/api/reports", {
+      method: "POST",
+      body: JSON.stringify({ name, description, spec }),
+    }),
 
   me: () => http<AuthState>("/api/auth/me"),
 

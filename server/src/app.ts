@@ -12,6 +12,7 @@ import { authRoutes } from "./auth/routes.js";
 import { createUser, getUserByName, pruneSessions, userCount } from "./auth/store.js";
 import { datasetRoutes } from "./routes/datasets.js";
 import { metricRoutes } from "./routes/metrics.js";
+import { reportRoutes } from "./routes/reports.js";
 import { dashboardRoutes } from "./routes/dashboards.js";
 
 /** Seed an admin from env on first run (no users yet), for headless deploys. */
@@ -46,6 +47,7 @@ export async function buildApp() {
   await app.register(authRoutes);
   await app.register(datasetRoutes);
   await app.register(metricRoutes);
+  await app.register(reportRoutes);
   await app.register(dashboardRoutes);
 
   // In production, optionally serve the built SPA from a single process.
