@@ -8,10 +8,14 @@ dist/
 build/
 .vite/
 
-# DuckDB data & ingest staging
+# DuckDB / SQLite data & ingest staging
 *.duckdb
 *.duckdb.wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 data/
+data-*/
 staging/
 
 # Env & secrets

@@ -1,0 +1,13 @@
+order_id,ts,region,product,amount
+1001,2026-01-05,North,Widget,120.50
+1002,2026-01-18,South,Gadget,89.00
+1003,2026-02-02,North,Widget,200.00
+1004,2026-02-14,East,Gizmo,55.25
+1005,2026-02-28,South,Widget,140.00
+1006,2026-03-09,North,Gadget,310.75
+1007,2026-03-22,West,Gizmo,75.00
+1008,2026-03-30,East,Widget,160.00
+1009,2026-04-11,South,Gadget,95.50
+1010,2026-04-25,North,Gizmo,420.00
+1011,2026-05-03,West,Widget,130.00
+1012,2026-05-19,East,Gadget,210.25

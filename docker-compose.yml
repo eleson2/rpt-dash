@@ -1,0 +1,17 @@
+services:
+  rpt-dash:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      DATA_DIR: /data
+      STAGING_DIR: /data/staging
+      WEB_DIST: /app/web
+      MAX_ROWS: "50000"
+    volumes:
+      # Persist the DuckDB file, SQLite metadata, and staged uploads.
+      - rpt-dash-data:/data
+
+volumes:
+  rpt-dash-data:
