@@ -5,9 +5,13 @@ with a Node/TypeScript server that owns the database connection.
 
 ## Status
 
-Phase 1 vertical slice working: upload a CSV/Parquet/JSON file → it's registered as a DuckDB
-view (queried in place) → define a curated, parameterized metric → render it as a chart or table
-in the browser.
+Phase 2. Upload a CSV/Parquet/JSON file → it's registered as a DuckDB view (queried in place) →
+define a curated, parameterized metric (with a live preview) → compose dashboards from metric
+tiles → render charts/tables in the browser.
+
+- **Phase 1:** ingest → view → metric → chart vertical slice.
+- **Phase 2:** dashboard composer + dashboard-driven view, metric preview, bounded read
+  connection pool, and per-query timeout (interrupt).
 
 ## Architecture
 
@@ -51,7 +55,8 @@ Then in the browser:
 2. **Metric builder** tab → create a metric, e.g.
    - SQL: `SELECT date_trunc('month', CAST(ts AS DATE)) AS month, sum(amount) AS total FROM sales WHERE region = $region GROUP BY 1 ORDER BY 1`
    - Param: `region` (string, required); Viz: line, x=`month`, y=`total`.
-3. **Dashboard** tab → set `region` = `North`, Apply, see the chart.
+3. **Compose** tab (optional) → create a dashboard and add the metric as a tile.
+4. **Dashboard** tab → pick "All metrics" or a saved dashboard, set `region` = `North`, Apply.
 
 ## Run it (Docker, single container)
 

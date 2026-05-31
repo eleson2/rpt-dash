@@ -1,11 +1,20 @@
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { Metric } from "../api/types";
 import { Chart, ResultTable } from "./Chart";
 
 /** A dashboard tile: renders param inputs, runs the metric, shows the chart/table. */
-export function MetricCard({ metric, onDelete }: { metric: Metric; onDelete?: () => void }) {
+export function MetricCard({
+  metric,
+  onDelete,
+  style,
+}: {
+  metric: Metric;
+  onDelete?: () => void;
+  style?: CSSProperties;
+}) {
   const [params, setParams] = useState<Record<string, string>>(
     Object.fromEntries(metric.params.map((p) => [p.name, ""])),
   );
@@ -17,7 +26,7 @@ export function MetricCard({ metric, onDelete }: { metric: Metric; onDelete?: ()
   });
 
   return (
-    <div className="card">
+    <div className="card" style={style}>
       <div className="card-head">
         <div>
           <strong>{metric.name}</strong>

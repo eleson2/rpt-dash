@@ -51,6 +51,45 @@ body {
 
 .stack { display: flex; flex-direction: column; gap: 16px; }
 
+/* 12-column dashboard grid; tiles span 3–12 columns via inline gridColumn. */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+}
+@media (max-width: 760px) {
+  .dash-grid { grid-template-columns: 1fr; }
+  .dash-grid > * { grid-column: 1 / -1 !important; }
+}
+
+.tiles { margin: 8px 0; }
+.tile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.tile-row:first-child { border-top: none; }
+.tile-index {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  background: #232733;
+  border-radius: 50%;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.preview-block {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);

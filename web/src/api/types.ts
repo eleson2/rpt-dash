@@ -52,3 +52,28 @@ export interface MetricInput {
   params: ParamDef[];
   viz: Viz;
 }
+
+export interface PreviewResult {
+  truncated: boolean;
+  columns: string[];
+  rows: Record<string, unknown>[];
+}
+
+export interface DashboardTile {
+  metricId: string;
+  w: number;
+  h: number;
+}
+
+export interface Dashboard {
+  id: string;
+  name: string;
+  layout: DashboardTile[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DashboardInput {
+  name: string;
+  layout: DashboardTile[];
+}

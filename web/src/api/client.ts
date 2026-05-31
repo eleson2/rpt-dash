@@ -1,4 +1,13 @@
-import type { Dataset, Metric, MetricInput, RunResult } from "./types";
+import type {
+  Dashboard,
+  DashboardInput,
+  Dataset,
+  Metric,
+  MetricInput,
+  ParamDef,
+  PreviewResult,
+  RunResult,
+} from "./types";
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -39,4 +48,21 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ params }),
     }),
+
+  previewMetric: (input: { sql: string; params: ParamDef[]; values: Record<string, unknown> }) =>
+    http<PreviewResult>("/api/metrics/preview", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  listDashboards: () =>
+    http<{ dashboards: Dashboard[] }>("/api/dashboards").then((r) => r.dashboards),
+
+  createDashboard: (input: DashboardInput) =>
+    http<Dashboard>("/api/dashboards", { method: "POST", body: JSON.stringify(input) }),
+
+  updateDashboard: (id: string, input: DashboardInput) =>
+    http<Dashboard>(`/api/dashboards/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+
+  deleteDashboard: (id: string) => http<void>(`/api/dashboards/${id}`, { method: "DELETE" }),
 };

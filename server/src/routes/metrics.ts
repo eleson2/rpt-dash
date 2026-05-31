@@ -7,8 +7,15 @@ import {
   listMetrics,
   updateMetric,
 } from "../metrics/store.js";
-import { runMetric } from "../metrics/run.js";
-import { metricInputSchema } from "../metrics/types.js";
+import { previewQuery, runMetric } from "../metrics/run.js";
+import { metricInputSchema, paramDefSchema } from "../metrics/types.js";
+import { z } from "zod";
+
+const previewSchema = z.object({
+  sql: z.string().min(1),
+  params: z.array(paramDefSchema).default([]),
+  values: z.record(z.string(), z.unknown()).default({}),
+});
 
 export async function metricRoutes(app: FastifyInstance) {
   app.get("/api/metrics", async () => ({ metrics: listMetrics() }));
@@ -24,6 +31,17 @@ export async function metricRoutes(app: FastifyInstance) {
       const input = metricInputSchema.parse(req.body);
       return reply.code(201).send(createMetric(input));
     } catch (err) {
+      return badRequest(reply, err);
+    }
+  });
+
+  // Preview unsaved SQL for the metric builder.
+  app.post("/api/metrics/preview", async (req, reply) => {
+    try {
+      const input = previewSchema.parse(req.body);
+      return await previewQuery(input);
+    } catch (err) {
+      req.log.error(err);
       return badRequest(reply, err);
     }
   });

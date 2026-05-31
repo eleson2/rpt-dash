@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { ParamDef, ParamType, Viz } from "../api/types";
+import { ResultTable } from "../components/Chart";
 
 const PARAM_TYPES: ParamType[] = ["string", "number", "boolean", "date"];
 
@@ -14,6 +15,18 @@ export function MetricBuilder() {
   const [sql, setSql] = useState("SELECT ... FROM your_view WHERE col = $param");
   const [params, setParams] = useState<ParamDef[]>([]);
   const [viz, setViz] = useState<Viz>({ type: "line", xField: "", yFields: [] });
+  const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
+
+  const preview = useMutation({
+    mutationFn: () =>
+      api.previewMetric({
+        sql,
+        params,
+        values: Object.fromEntries(
+          params.filter((p) => previewValues[p.name]).map((p) => [p.name, previewValues[p.name]]),
+        ),
+      }),
+  });
 
   const create = useMutation({
     mutationFn: () =>
@@ -134,6 +147,38 @@ export function MetricBuilder() {
               }
             />
           </label>
+        </div>
+
+        <div className="preview-block">
+          <div className="card-head">
+            <strong>Preview</strong>
+          </div>
+          {params.length > 0 && (
+            <div className="filters">
+              {params.map((p) => (
+                <label key={p.name || Math.random()}>
+                  {p.name || "(unnamed)"}
+                  <input
+                    type={p.type === "date" ? "date" : p.type === "number" ? "number" : "text"}
+                    value={previewValues[p.name] ?? ""}
+                    onChange={(e) =>
+                      setPreviewValues({ ...previewValues, [p.name]: e.target.value })
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+          <button className="link" onClick={() => preview.mutate()} disabled={!sql || preview.isPending}>
+            {preview.isPending ? "Running…" : "Run preview"}
+          </button>
+          {preview.isError && <div className="error">{(preview.error as Error).message}</div>}
+          {preview.data && (
+            <>
+              <ResultTable result={{ ...preview.data, metricId: "" }} />
+              {preview.data.truncated && <div className="muted">Preview truncated.</div>}
+            </>
+          )}
         </div>
 
         <button onClick={() => create.mutate()} disabled={!name || !sql || create.isPending}>

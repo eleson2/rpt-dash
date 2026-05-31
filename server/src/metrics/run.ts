@@ -1,6 +1,11 @@
 import { config } from "../config.js";
 import { runQuery, type QueryResult } from "../db/duckdb.js";
-import { type Metric, assertReadOnlySql, paramValuesSchema } from "./types.js";
+import {
+  type Metric,
+  type ParamDef,
+  assertReadOnlySql,
+  paramValuesSchema,
+} from "./types.js";
 
 export interface RunResult extends QueryResult {
   metricId: string;
@@ -38,4 +43,32 @@ export async function runMetric(
   if (truncated) result.rows.length = cap;
 
   return { metricId: metric.id, truncated, ...result };
+}
+
+/**
+ * Run unsaved metric SQL for the builder's preview pane. Same safety as a real
+ * run (read-only check, param validation, prepared binding) but a small,
+ * fixed row cap so authors get fast feedback.
+ */
+export async function previewQuery(input: {
+  sql: string;
+  params: ParamDef[];
+  values: Record<string, unknown>;
+  limit?: number;
+}): Promise<QueryResult & { truncated: boolean }> {
+  assertReadOnlySql(input.sql);
+  const values = paramValuesSchema(input.params).parse(input.values ?? {});
+
+  const bound: Record<string, unknown> = {};
+  for (const p of input.params) {
+    if (p.name in values) bound[p.name] = (values as Record<string, unknown>)[p.name];
+  }
+
+  const limit = Math.min(input.limit ?? 50, 500);
+  const wrapped = `SELECT * FROM (${input.sql}) AS _p LIMIT ${limit + 1}`;
+  const result = await runQuery(wrapped, input.params.length ? bound : undefined);
+
+  const truncated = result.rows.length > limit;
+  if (truncated) result.rows.length = limit;
+  return { truncated, ...result };
 }

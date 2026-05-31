@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Dashboard } from "./pages/Dashboard";
+import { DashboardComposer } from "./pages/DashboardComposer";
 import { Ingest } from "./pages/Ingest";
 import { MetricBuilder } from "./pages/MetricBuilder";
 
-type Tab = "dashboard" | "metrics" | "ingest";
+type Tab = "dashboard" | "compose" | "metrics" | "ingest";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "dashboard", label: "Dashboard" },
+  { id: "compose", label: "Compose" },
   { id: "metrics", label: "Metric builder" },
   { id: "ingest", label: "Datasets" },
 ];
@@ -32,6 +34,7 @@ export default function App() {
       </header>
       <main className="content">
         {tab === "dashboard" && <Dashboard />}
+        {tab === "compose" && <DashboardComposer />}
         {tab === "metrics" && <MetricBuilder />}
         {tab === "ingest" && <Ingest />}
       </main>

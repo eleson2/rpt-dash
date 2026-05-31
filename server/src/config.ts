@@ -10,6 +10,10 @@ export const config = {
   stagingDir: resolve(process.env.STAGING_DIR ?? "./data/staging"),
   /** Max rows any single metric query may return. */
   maxRows: Number(process.env.MAX_ROWS ?? 50_000),
+  /** Number of reusable DuckDB read connections. */
+  readPoolSize: Number(process.env.READ_POOL_SIZE ?? 4),
+  /** Per-query timeout in ms; the query is interrupted when exceeded (0 = disabled). */
+  queryTimeoutMs: Number(process.env.QUERY_TIMEOUT_MS ?? 30_000),
   /** Allowed browser origin for the SPA during development. */
   corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
 } as const;
