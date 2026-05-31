@@ -39,4 +39,19 @@ meta.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS users (
+    id            TEXT PRIMARY KEY,
+    username      TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,          -- scrypt: salt:derivedKey (hex)
+    role          TEXT NOT NULL DEFAULT 'viewer', -- 'admin' | 'viewer'
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    token      TEXT PRIMARY KEY,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL,          -- epoch ms
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);

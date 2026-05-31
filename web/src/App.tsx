@@ -1,42 +1,69 @@
 import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "./api/client";
 import { Dashboard } from "./pages/Dashboard";
 import { DashboardComposer } from "./pages/DashboardComposer";
 import { Ingest } from "./pages/Ingest";
 import { MetricBuilder } from "./pages/MetricBuilder";
+import { Login } from "./pages/Login";
 
 type Tab = "dashboard" | "compose" | "metrics" | "ingest";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "compose", label: "Compose" },
-  { id: "metrics", label: "Metric builder" },
-  { id: "ingest", label: "Datasets" },
+const TABS: { id: Tab; label: string; adminOnly: boolean }[] = [
+  { id: "dashboard", label: "Dashboard", adminOnly: false },
+  { id: "compose", label: "Compose", adminOnly: true },
+  { id: "metrics", label: "Metric builder", adminOnly: true },
+  { id: "ingest", label: "Datasets", adminOnly: true },
 ];
 
 export default function App() {
+  const qc = useQueryClient();
+  const auth = useQuery({ queryKey: ["auth"], queryFn: api.me });
   const [tab, setTab] = useState<Tab>("dashboard");
+
+  const logout = useMutation({
+    mutationFn: api.logout,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["auth"] }),
+  });
+
+  if (auth.isLoading) return <div className="login-wrap muted">Loading…</div>;
+
+  const user = auth.data?.user ?? null;
+  if (!user) return <Login needsBootstrap={auth.data?.needsBootstrap ?? false} />;
+
+  const isAdmin = user.role === "admin";
+  const visibleTabs = TABS.filter((t) => !t.adminOnly || isAdmin);
+  const activeTab = visibleTabs.some((t) => t.id === tab) ? tab : "dashboard";
 
   return (
     <div className="app">
       <header className="topbar">
         <div className="brand">rpt-dash</div>
         <nav>
-          {TABS.map((t) => (
+          {visibleTabs.map((t) => (
             <button
               key={t.id}
-              className={t.id === tab ? "tab active" : "tab"}
+              className={t.id === activeTab ? "tab active" : "tab"}
               onClick={() => setTab(t.id)}
             >
               {t.label}
             </button>
           ))}
         </nav>
+        <div className="user-box">
+          <span className="muted">
+            {user.username} <span className="badge">{user.role}</span>
+          </span>
+          <button className="link" onClick={() => logout.mutate()}>
+            sign out
+          </button>
+        </div>
       </header>
       <main className="content">
-        {tab === "dashboard" && <Dashboard />}
-        {tab === "compose" && <DashboardComposer />}
-        {tab === "metrics" && <MetricBuilder />}
-        {tab === "ingest" && <Ingest />}
+        {activeTab === "dashboard" && <Dashboard />}
+        {activeTab === "compose" && isAdmin && <DashboardComposer />}
+        {activeTab === "metrics" && isAdmin && <MetricBuilder />}
+        {activeTab === "ingest" && isAdmin && <Ingest />}
       </main>
     </div>
   );

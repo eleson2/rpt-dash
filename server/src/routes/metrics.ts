@@ -9,6 +9,7 @@ import {
 } from "../metrics/store.js";
 import { previewQuery, runMetric } from "../metrics/run.js";
 import { metricInputSchema, paramDefSchema } from "../metrics/types.js";
+import { requireAdmin, requireAuth } from "../auth/guards.js";
 import { z } from "zod";
 
 const previewSchema = z.object({
@@ -18,15 +19,19 @@ const previewSchema = z.object({
 });
 
 export async function metricRoutes(app: FastifyInstance) {
-  app.get("/api/metrics", async () => ({ metrics: listMetrics() }));
+  // Reads require any authenticated user; authoring requires an admin.
+  const read = { preHandler: requireAuth };
+  const admin = { preHandler: requireAdmin };
 
-  app.get("/api/metrics/:id", async (req, reply) => {
+  app.get("/api/metrics", read, async () => ({ metrics: listMetrics() }));
+
+  app.get("/api/metrics/:id", read, async (req, reply) => {
     const { id } = req.params as { id: string };
     const metric = getMetric(id);
     return metric ? metric : reply.code(404).send({ error: "Metric not found" });
   });
 
-  app.post("/api/metrics", async (req, reply) => {
+  app.post("/api/metrics", admin, async (req, reply) => {
     try {
       const input = metricInputSchema.parse(req.body);
       return reply.code(201).send(createMetric(input));
@@ -36,7 +41,7 @@ export async function metricRoutes(app: FastifyInstance) {
   });
 
   // Preview unsaved SQL for the metric builder.
-  app.post("/api/metrics/preview", async (req, reply) => {
+  app.post("/api/metrics/preview", admin, async (req, reply) => {
     try {
       const input = previewSchema.parse(req.body);
       return await previewQuery(input);
@@ -46,7 +51,7 @@ export async function metricRoutes(app: FastifyInstance) {
     }
   });
 
-  app.put("/api/metrics/:id", async (req, reply) => {
+  app.put("/api/metrics/:id", admin, async (req, reply) => {
     const { id } = req.params as { id: string };
     try {
       const input = metricInputSchema.parse(req.body);
@@ -57,13 +62,13 @@ export async function metricRoutes(app: FastifyInstance) {
     }
   });
 
-  app.delete("/api/metrics/:id", async (req, reply) => {
+  app.delete("/api/metrics/:id", admin, async (req, reply) => {
     const { id } = req.params as { id: string };
     return deleteMetric(id) ? reply.code(204).send() : reply.code(404).send({ error: "Metric not found" });
   });
 
   // Run a metric with caller-supplied filter params.
-  app.post("/api/metrics/:id/run", async (req, reply) => {
+  app.post("/api/metrics/:id/run", read, async (req, reply) => {
     const { id } = req.params as { id: string };
     const metric = getMetric(id);
     if (!metric) return reply.code(404).send({ error: "Metric not found" });

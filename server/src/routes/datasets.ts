@@ -6,12 +6,13 @@ import { nanoid } from "nanoid";
 import { config } from "../config.js";
 import { listDatasets, registerDataset } from "../ingest/upload.js";
 import { formatFromFilename } from "../ingest/introspect.js";
+import { requireAdmin, requireAuth } from "../auth/guards.js";
 
 export async function datasetRoutes(app: FastifyInstance) {
-  app.get("/api/datasets", async () => ({ datasets: listDatasets() }));
+  app.get("/api/datasets", { preHandler: requireAuth }, async () => ({ datasets: listDatasets() }));
 
-  // Multipart upload: stream the file to staging, then register it as a view.
-  app.post("/api/datasets/upload", async (req, reply) => {
+  // Multipart upload (admin only): stream the file to staging, then register it as a view.
+  app.post("/api/datasets/upload", { preHandler: requireAdmin }, async (req, reply) => {
     const file = await req.file();
     if (!file) return reply.code(400).send({ error: "No file uploaded" });
 

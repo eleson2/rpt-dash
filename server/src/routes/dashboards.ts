@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { meta } from "../db/metadata.js";
+import { requireAdmin, requireAuth } from "../auth/guards.js";
 
 const tileSchema = z.object({
   metricId: z.string(),
@@ -32,18 +33,21 @@ function toDashboard(r: DashboardRow) {
 }
 
 export async function dashboardRoutes(app: FastifyInstance) {
-  app.get("/api/dashboards", async () => {
+  const read = { preHandler: requireAuth };
+  const admin = { preHandler: requireAdmin };
+
+  app.get("/api/dashboards", read, async () => {
     const rows = meta.prepare("SELECT * FROM dashboards ORDER BY name").all() as DashboardRow[];
     return { dashboards: rows.map(toDashboard) };
   });
 
-  app.get("/api/dashboards/:id", async (req, reply) => {
+  app.get("/api/dashboards/:id", read, async (req, reply) => {
     const { id } = req.params as { id: string };
     const row = meta.prepare("SELECT * FROM dashboards WHERE id = ?").get(id) as DashboardRow | undefined;
     return row ? toDashboard(row) : reply.code(404).send({ error: "Dashboard not found" });
   });
 
-  app.post("/api/dashboards", async (req, reply) => {
+  app.post("/api/dashboards", admin, async (req, reply) => {
     const parsed = dashboardInput.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "Validation failed", issues: parsed.error.issues });
     const id = nanoid(12);
@@ -54,7 +58,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
     return reply.code(201).send(toDashboard(row));
   });
 
-  app.put("/api/dashboards/:id", async (req, reply) => {
+  app.put("/api/dashboards/:id", admin, async (req, reply) => {
     const { id } = req.params as { id: string };
     const parsed = dashboardInput.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "Validation failed", issues: parsed.error.issues });
@@ -66,7 +70,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
     return toDashboard(row);
   });
 
-  app.delete("/api/dashboards/:id", async (req, reply) => {
+  app.delete("/api/dashboards/:id", admin, async (req, reply) => {
     const { id } = req.params as { id: string };
     const res = meta.prepare("DELETE FROM dashboards WHERE id = ?").run(id);
     return res.changes ? reply.code(204).send() : reply.code(404).send({ error: "Dashboard not found" });

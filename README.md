@@ -5,13 +5,26 @@ with a Node/TypeScript server that owns the database connection.
 
 ## Status
 
-Phase 2. Upload a CSV/Parquet/JSON file → it's registered as a DuckDB view (queried in place) →
+Phase 3. Upload a CSV/Parquet/JSON file → it's registered as a DuckDB view (queried in place) →
 define a curated, parameterized metric (with a live preview) → compose dashboards from metric
-tiles → render charts/tables in the browser.
+tiles → render charts/tables in the browser. Access is now gated by login.
 
 - **Phase 1:** ingest → view → metric → chart vertical slice.
 - **Phase 2:** dashboard composer + dashboard-driven view, metric preview, bounded read
   connection pool, and per-query timeout (interrupt).
+- **Phase 3:** session-cookie auth with roles. Admins author metrics/dashboards/datasets;
+  viewers can only view dashboards and run metrics. Passwords hashed with Node `scrypt`.
+
+## Auth
+
+On first run the app has no users; the setup screen creates the first **admin** (or seed one
+headlessly with `ADMIN_USER`/`ADMIN_PASSWORD`). Admins add more users (admin or viewer) — the
+API for user management is `POST /api/auth/register` (admin-only after bootstrap). Sessions are
+httpOnly cookies (7-day TTL); set `NODE_ENV=production` so cookies are marked `Secure` behind
+HTTPS.
+
+> Authoring routes require the **admin** role; read routes require any authenticated user.
+> Even so, keep the server on a trusted network — admins can author arbitrary read-only SQL.
 
 ## Architecture
 

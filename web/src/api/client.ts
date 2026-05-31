@@ -1,4 +1,6 @@
 import type {
+  AuthState,
+  AuthUser,
   Dashboard,
   DashboardInput,
   Dataset,
@@ -11,6 +13,8 @@ import type {
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
+    // Send the session cookie (same-origin in dev via the Vite proxy).
+    credentials: "include",
     headers: init?.body && !(init.body instanceof FormData)
       ? { "Content-Type": "application/json" }
       : undefined,
@@ -65,4 +69,20 @@ export const api = {
     http<Dashboard>(`/api/dashboards/${id}`, { method: "PUT", body: JSON.stringify(input) }),
 
   deleteDashboard: (id: string) => http<void>(`/api/dashboards/${id}`, { method: "DELETE" }),
+
+  me: () => http<AuthState>("/api/auth/me"),
+
+  login: (username: string, password: string) =>
+    http<{ user: AuthUser }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    }).then((r) => r.user),
+
+  register: (username: string, password: string, role?: "admin" | "viewer") =>
+    http<{ user: AuthUser }>("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ username, password, role }),
+    }).then((r) => r.user),
+
+  logout: () => http<void>("/api/auth/logout", { method: "POST" }),
 };

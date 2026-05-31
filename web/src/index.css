@@ -31,6 +31,24 @@ body {
 
 .brand { font-weight: 700; font-size: 18px; }
 
+.user-box {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.login-card { width: 100%; max-width: 360px; }
+.login-card .brand { margin-bottom: 4px; }
+.login-card button[type="submit"] { width: 100%; margin-top: 12px; }
+
 .tab {
   background: transparent;
   border: none;

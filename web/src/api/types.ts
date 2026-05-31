@@ -77,3 +77,17 @@ export interface DashboardInput {
   name: string;
   layout: DashboardTile[];
 }
+
+export type Role = "admin" | "viewer";
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  role: Role;
+  createdAt: string;
+}
+
+export interface AuthState {
+  user: AuthUser | null;
+  needsBootstrap: boolean;
+}
