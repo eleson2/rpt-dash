@@ -41,7 +41,10 @@ export function Login({ needsBootstrap }: { needsBootstrap: boolean }) {
           />
         </label>
         {needsBootstrap && <div className="muted small">Password must be at least 8 characters.</div>}
-        <button type="submit" disabled={!username || !password || submit.isPending}>
+        <button
+          type="submit"
+          disabled={!username || (needsBootstrap && !password) || submit.isPending}
+        >
           {submit.isPending ? "…" : needsBootstrap ? "Create admin" : "Sign in"}
         </button>
         {submit.isError && <div className="error">{(submit.error as Error).message}</div>}

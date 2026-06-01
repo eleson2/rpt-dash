@@ -20,6 +20,13 @@ const registerSchema = credsSchema.extend({
   role: z.enum(["admin", "viewer"]).optional(),
 });
 
+// Login allows an empty password: passwordless accounts sign in on username
+// alone. The password is still verified for accounts that have one.
+const loginSchema = z.object({
+  username: z.string().min(1).max(64),
+  password: z.string().max(256).default(""),
+});
+
 const cookieOpts = {
   httpOnly: true,
   sameSite: "lax" as const,
@@ -64,7 +71,7 @@ export async function authRoutes(app: FastifyInstance) {
   });
 
   app.post("/api/auth/login", async (req, reply) => {
-    const parsed = credsSchema.safeParse(req.body);
+    const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: "Invalid credentials" });
     const user = authenticate(parsed.data.username, parsed.data.password);
     if (!user) return reply.code(401).send({ error: "Invalid username or password" });

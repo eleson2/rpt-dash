@@ -7,8 +7,15 @@ import { join } from "node:path";
 // Point the metadata DB at a throwaway dir before importing the store.
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "rptdash-auth-"));
 
-const { authenticate, createSession, createUser, destroySession, getSessionUser, userCount } =
-  await import("../src/auth/store.js");
+const {
+  authenticate,
+  clearPassword,
+  createSession,
+  createUser,
+  destroySession,
+  getSessionUser,
+  userCount,
+} = await import("../src/auth/store.js");
 
 test("password hashing round-trips and rejects wrong password", () => {
   assert.equal(userCount(), 0);
@@ -17,6 +24,17 @@ test("password hashing round-trips and rejects wrong password", () => {
   assert.ok(authenticate("alice", "correct horse battery"));
   assert.equal(authenticate("alice", "wrong password"), undefined);
   assert.equal(authenticate("nobody", "whatever"), undefined);
+});
+
+test("passwordless account signs in on username alone", () => {
+  const user = createUser("admin", "to-be-removed", "admin");
+  assert.ok(authenticate("admin", "to-be-removed"));
+  assert.equal(clearPassword("admin"), true);
+  // Any password (including none) now works for the passwordless account.
+  assert.equal(authenticate("admin", "")?.id, user.id);
+  assert.equal(authenticate("admin", "anything at all")?.id, user.id);
+  // Clearing a non-existent user reports no change.
+  assert.equal(clearPassword("ghost"), false);
 });
 
 test("sessions resolve to the user and can be destroyed", () => {

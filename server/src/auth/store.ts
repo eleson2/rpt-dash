@@ -64,11 +64,25 @@ export function listUsers(): User[] {
   return rows.map(toUser);
 }
 
-/** Verify credentials; returns the user on success, undefined otherwise. */
+/**
+ * Verify credentials; returns the user on success, undefined otherwise.
+ * Passwordless accounts (empty password_hash) sign in with the username alone,
+ * ignoring whatever password is supplied.
+ */
 export function authenticate(username: string, password: string): User | undefined {
   const row = getUserByName(username);
-  if (!row || !verifyPassword(password, row.password_hash)) return undefined;
+  if (!row) return undefined;
+  if (row.password_hash === "") return toUser(row);
+  if (!verifyPassword(password, row.password_hash)) return undefined;
   return toUser(row);
+}
+
+/** Remove a user's password so they can sign in with their username alone. */
+export function clearPassword(username: string): boolean {
+  const res = meta
+    .prepare("UPDATE users SET password_hash = '' WHERE username = ?")
+    .run(username);
+  return res.changes > 0;
 }
 
 // --- sessions ---
