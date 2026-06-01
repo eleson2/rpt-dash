@@ -1,7 +1,13 @@
 import { nanoid } from "nanoid";
 import { meta } from "../db/metadata.js";
 import { withWriteLock } from "../db/duckdb.js";
-import { type ColumnInfo, type FileFormat, introspect, readerFor } from "./introspect.js";
+import {
+  type ColumnInfo,
+  type FileFormat,
+  introspect,
+  introspectReader,
+  readerFor,
+} from "./introspect.js";
 
 export interface Dataset {
   id: string;
@@ -86,6 +92,51 @@ export async function registerDataset(opts: {
       name: viewName,
       source_path: opts.absPath,
       format: opts.format,
+      columns: JSON.stringify(info.columns),
+      row_estimate: info.rowEstimate,
+    });
+
+  const row = meta.prepare("SELECT * FROM datasets WHERE name = ?").get(viewName) as DatasetRow;
+  return rowToDataset(row);
+}
+
+/**
+ * Register a DuckDB view backed by an arbitrary reader expression (e.g. a glob
+ * over many parquet files unioned into one table). `sourcePath` is the human
+ * label recorded in the catalog (the glob pattern). Upserts on name like
+ * registerDataset.
+ */
+export async function registerView(opts: {
+  name: string;
+  reader: string;
+  sourcePath: string;
+  format?: FileFormat;
+}): Promise<Dataset> {
+  const viewName = safeViewName(opts.name);
+  if (!IDENT.test(viewName)) throw new Error(`Invalid view name: ${viewName}`);
+
+  const info = await introspectReader(opts.reader);
+
+  await withWriteLock(async (conn) => {
+    await conn.run(`CREATE OR REPLACE VIEW "${viewName}" AS SELECT * FROM ${opts.reader}`);
+  });
+
+  const id = nanoid(12);
+  meta
+    .prepare(
+      `INSERT INTO datasets (id, name, source_path, format, columns, row_estimate)
+       VALUES (@id, @name, @source_path, @format, @columns, @row_estimate)
+       ON CONFLICT(name) DO UPDATE SET
+         source_path = excluded.source_path,
+         format = excluded.format,
+         columns = excluded.columns,
+         row_estimate = excluded.row_estimate`,
+    )
+    .run({
+      id,
+      name: viewName,
+      source_path: opts.sourcePath,
+      format: opts.format ?? "parquet",
       columns: JSON.stringify(info.columns),
       row_estimate: info.rowEstimate,
     });

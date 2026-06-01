@@ -22,6 +22,18 @@ export function readerFor(format: FileFormat, absPath: string): string {
   }
 }
 
+/**
+ * Reader for a set of parquet files matched by a glob, unioned into one table.
+ * `union_by_name` tolerates schema drift across files; `filename` and
+ * `hive_partitioning` surface each row's source path and any `key=value`
+ * path segments (e.g. year=/month=) as columns. Re-evaluated on every query,
+ * so files added later are picked up without re-registering.
+ */
+export function parquetGlobReader(globPath: string): string {
+  const p = globPath.replace(/\\/g, "/").replace(/'/g, "''");
+  return `read_parquet('${p}', union_by_name=true, filename=true, hive_partitioning=true)`;
+}
+
 export function formatFromFilename(name: string): FileFormat | null {
   const lower = name.toLowerCase();
   if (lower.endsWith(".parquet") || lower.endsWith(".pq")) return "parquet";
@@ -38,8 +50,11 @@ export interface Introspection {
 
 /** Inspect a staged file: column schema, row count, and a small preview. */
 export async function introspect(format: FileFormat, absPath: string): Promise<Introspection> {
-  const reader = readerFor(format, absPath);
+  return introspectReader(readerFor(format, absPath));
+}
 
+/** Inspect any DuckDB reader expression: column schema, row count, preview. */
+export async function introspectReader(reader: string): Promise<Introspection> {
   const desc = await runQuery(`DESCRIBE SELECT * FROM ${reader}`);
   const columns: ColumnInfo[] = desc.rows.map((r) => ({
     name: String(r["column_name"]),

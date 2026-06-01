@@ -48,8 +48,10 @@ export async function buildApp() {
   // never deal with uploads or storage format. Errors are logged, not fatal.
   if (config.parquetDir) {
     try {
-      const { registered, errors } = await discoverParquet(config.parquetDir);
-      app.log.info(`Auto-registered ${registered.length} parquet dataset(s) from ${config.parquetDir}.`);
+      const { registered, combined, errors } = await discoverParquet(config.parquetDir);
+      app.log.info(
+        `Auto-registered ${registered.length} parquet dataset(s) and ${combined.length} combined view(s) from ${config.parquetDir}.`,
+      );
       for (const e of errors) app.log.warn(`Skipped ${e.path}: ${e.error}`);
     } catch (err) {
       app.log.error(err, "Parquet auto-discovery failed");
