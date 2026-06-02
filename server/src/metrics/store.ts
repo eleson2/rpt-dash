@@ -105,3 +105,28 @@ export function updateMetric(id: string, input: MetricInput): Metric | undefined
 export function deleteMetric(id: string): boolean {
   return meta.prepare("DELETE FROM metrics WHERE id = ?").run(id).changes > 0;
 }
+
+/**
+ * Re-bake a visual report's stored SQL/viz/params/spec after its dataset's
+ * columns were re-curated. Unlike updateMetric this preserves name/description
+ * and updates the structured fields a visual report derives from its spec.
+ */
+export function updateVisualMetricSpec(
+  id: string,
+  fields: { sql: string; viz: unknown; fixedParams: Record<string, unknown>; spec: unknown },
+): void {
+  meta
+    .prepare(
+      `UPDATE metrics
+         SET sql = @sql, viz = @viz, fixed_params = @fixed_params, spec = @spec,
+             updated_at = datetime('now')
+       WHERE id = @id`,
+    )
+    .run({
+      id,
+      sql: fields.sql,
+      viz: JSON.stringify(fields.viz),
+      fixed_params: JSON.stringify(fields.fixedParams),
+      spec: JSON.stringify(fields.spec),
+    });
+}

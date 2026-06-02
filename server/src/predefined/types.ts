@@ -36,6 +36,13 @@ export interface PredefinedReport {
   description: string;
   chart: ReportOutput["chart"];
   controls: Control[];
+  /**
+   * The dataset view this report reads, and the physical columns it depends on.
+   * Declared so column-curation can refuse to rename/hide a column a predefined
+   * report needs (it references columns by physical name in its SQL).
+   */
+  view?: string;
+  requiredColumns?: string[];
   /** Optional time-drilldown descriptor; omit for non-drillable reports. */
   drilldown?: DrilldownSpec;
   /** Dynamic option lists keyed by control.optionsKey (e.g. lpars, serviceClasses, minDate). */

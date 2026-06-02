@@ -16,9 +16,21 @@ meta.exec(`
     name         TEXT NOT NULL UNIQUE,   -- logical view name in DuckDB
     source_path  TEXT NOT NULL,
     format       TEXT NOT NULL,          -- 'parquet' | 'csv' | 'json'
-    columns      TEXT NOT NULL,          -- JSON: [{ name, type }]
+    columns      TEXT NOT NULL,          -- JSON: [{ name, type }] (curated, as exposed by the view)
     row_estimate INTEGER,
     created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Per-column curation overlay for a dataset view: friendly labels and
+  -- visibility. The DuckDB view is rebuilt from this (SELECT phys AS label, …),
+  -- so it is the source of truth for renames/hides and is re-applied on startup.
+  CREATE TABLE IF NOT EXISTS column_meta (
+    dataset    TEXT NOT NULL,            -- DuckDB view name
+    column     TEXT NOT NULL,            -- physical column name (from the file)
+    label      TEXT,                     -- friendly alias; NULL → use physical name
+    visible    INTEGER NOT NULL DEFAULT 1,
+    sort_order INTEGER,
+    PRIMARY KEY (dataset, column)
   );
 
   CREATE TABLE IF NOT EXISTS metrics (
@@ -72,3 +84,13 @@ addColumnIfMissing("metrics", "owner_id", "owner_id TEXT");
 // Server-side bound values for a metric's baked-in placeholders (e.g. a visual
 // report's filter values). Supplied to the query on every run; not user-facing.
 addColumnIfMissing("metrics", "fixed_params", "fixed_params TEXT NOT NULL DEFAULT '{}'");
+
+// Physical schema of a dataset's underlying file(s), kept alongside the curated
+// `columns` so the column editor can still show original names/types after a
+// view rename. JSON: [{ name, type }].
+addColumnIfMissing("datasets", "raw_columns", "raw_columns TEXT");
+
+// How a dataset surfaces to users: 'table' = a logical data source (a combined
+// per-type view or an uploaded file) shown in the UI; 'file' = an internal
+// per-file entry from discovery, hidden behind the combined view.
+addColumnIfMissing("datasets", "kind", "kind TEXT NOT NULL DEFAULT 'table'");

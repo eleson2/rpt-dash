@@ -1,9 +1,12 @@
 import type {
   AuthState,
   AuthUser,
+  ColumnMeta,
+  CurationResult,
   Dashboard,
   DashboardInput,
   Dataset,
+  DatasetColumns,
   Metric,
   MetricInput,
   ParamDef,
@@ -44,6 +47,15 @@ export const api = {
       body: form,
     }).then((r) => r.dataset);
   },
+
+  getDatasetColumns: (name: string) =>
+    http<DatasetColumns>(`/api/datasets/${encodeURIComponent(name)}/columns`),
+
+  saveDatasetColumns: (name: string, columns: ColumnMeta[]) =>
+    http<CurationResult>(`/api/datasets/${encodeURIComponent(name)}/columns`, {
+      method: "PUT",
+      body: JSON.stringify({ columns }),
+    }),
 
   listMetrics: () => http<{ metrics: Metric[] }>("/api/metrics").then((r) => r.metrics),
 

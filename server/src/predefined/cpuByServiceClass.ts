@@ -77,6 +77,8 @@ export const cpuByServiceClass: PredefinedReport = {
   description:
     "Stacked CPU usage over time for one LPAR. Pick which service classes to show individually; the rest are summed into an 'Other' band on top.",
   chart: "stacked-area",
+  view: VIEW,
+  requiredColumns: Object.values(COL),
   controls: [
     { name: "lpar", label: "LPAR", type: "single", optionsKey: "lpars", required: true },
     { name: "from", label: "From", type: "datetime", defaultKey: "minTs" },

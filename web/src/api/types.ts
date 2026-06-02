@@ -33,9 +33,32 @@ export interface Dataset {
   name: string;
   sourcePath: string;
   format: "parquet" | "csv" | "json";
+  /** 'table' = a logical data source shown to users; 'file' = internal per-file entry. */
+  kind: "table" | "file";
+  /** Columns as exposed by the curated view — what the report builder sees. */
   columns: ColumnInfo[];
+  /** Physical columns of the underlying file(s), before curation. */
+  rawColumns: ColumnInfo[];
   rowEstimate: number;
   createdAt: string;
+}
+
+/** Per-column curation overlay: friendly label + visibility + order. */
+export interface ColumnMeta {
+  column: string;
+  label: string | null;
+  visible: boolean;
+  sortOrder: number | null;
+}
+
+export interface DatasetColumns {
+  physical: ColumnInfo[];
+  curation: ColumnMeta[];
+}
+
+export interface CurationResult {
+  dataset: Dataset;
+  migration: { migrated: string[]; warnings: string[] };
 }
 
 export interface RunResult {

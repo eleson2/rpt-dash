@@ -61,7 +61,8 @@ export async function discoverParquet(rootDir: string): Promise<DiscoverResult> 
   for await (const absPath of walkParquet(rootDir)) {
     const name = safeViewName(relative(rootDir, absPath));
     try {
-      await registerDataset({ name, format: "parquet", absPath });
+      // Per-file entries are internal; users see the combined per-type view.
+      await registerDataset({ name, format: "parquet", absPath, kind: "file" });
       registered.push(name);
     } catch (err) {
       errors.push({ path: absPath, error: (err as Error).message });

@@ -13,6 +13,40 @@ function quoteIdent(name: string): string {
   return `"${name.replace(/"/g, '""')}"`;
 }
 
+/**
+ * Whether a DuckDB column type can be bucketed by year/month/day. Date/time
+ * types cast cleanly, and strings are parsed at query time; numeric, boolean,
+ * and other types cannot be cast to DATE/TIMESTAMP and would fail mid-query.
+ */
+function isTemporalCastable(type: string): boolean {
+  const t = type.toUpperCase();
+  return (
+    t.includes("DATE") ||
+    t.includes("TIMESTAMP") ||
+    t.includes("TIME") ||
+    t.includes("VARCHAR") ||
+    t.includes("CHAR") ||
+    t.includes("STRING") ||
+    t.includes("TEXT")
+  );
+}
+
+/**
+ * Whether a DuckDB column type is numeric. `sum`/`avg` only accept numeric (and
+ * interval) inputs; applying them to text/other types fails at query time.
+ */
+function isNumericType(type: string): boolean {
+  const t = type.toUpperCase();
+  return (
+    t.includes("INT") || // TINYINT..BIGINT, HUGEINT, U*INT (also INTERVAL, which avg accepts)
+    t.includes("DECIMAL") ||
+    t.includes("NUMERIC") ||
+    t.includes("DOUBLE") ||
+    t.includes("FLOAT") ||
+    t.includes("REAL")
+  );
+}
+
 function dimExpr(d: Dimension): string {
   const q = quoteIdent(d.column);
   switch (d.transform) {
@@ -59,17 +93,32 @@ function uniquify(aliases: string[]): string[] {
 export function buildReportSql(spec: ReportSpec): BuiltQuery {
   const dataset = listDatasets().find((d) => d.name === spec.dataset);
   if (!dataset) throw new Error(`Unknown dataset: ${spec.dataset}`);
-  const validColumns = new Set(dataset.columns.map((c) => c.name));
+  const columnTypes = new Map(dataset.columns.map((c) => [c.name, c.type]));
 
   const requireColumn = (col: string) => {
-    if (!validColumns.has(col)) throw new Error(`Unknown column "${col}" in dataset ${spec.dataset}`);
+    if (!columnTypes.has(col)) throw new Error(`Unknown column "${col}" in dataset ${spec.dataset}`);
   };
 
   // Validate all referenced columns up front.
-  for (const d of spec.dimensions) requireColumn(d.column);
+  for (const d of spec.dimensions) {
+    requireColumn(d.column);
+    if (d.transform !== "none" && !isTemporalCastable(columnTypes.get(d.column)!)) {
+      throw new Error(
+        `Cannot apply "${d.transform}" bucketing to column "${d.column}" ` +
+          `(type ${columnTypes.get(d.column)}). Date bucketing requires a date, ` +
+          `timestamp, or text column.`,
+      );
+    }
+  }
   for (const m of spec.measures) {
     if (m.agg !== "count" && !m.column) throw new Error(`${m.agg} requires a column`);
     if (m.column) requireColumn(m.column);
+    if ((m.agg === "sum" || m.agg === "avg") && m.column && !isNumericType(columnTypes.get(m.column)!)) {
+      throw new Error(
+        `Cannot apply "${m.agg}" to column "${m.column}" (type ${columnTypes.get(m.column)}). ` +
+          `Sum and average require a numeric column.`,
+      );
+    }
   }
   for (const f of spec.filters) requireColumn(f.column);
 

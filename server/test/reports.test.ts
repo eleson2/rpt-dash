@@ -63,6 +63,45 @@ test("applies month bucketing", () => {
   assert.match(sql, /date_trunc\('month', CAST\("ts" AS TIMESTAMP\)\) AS "ts_month"/);
 });
 
+test("rejects sum/avg on a non-numeric column", () => {
+  assert.throws(
+    () =>
+      buildReportSql({
+        dataset: "sales",
+        dimensions: [],
+        measures: [{ agg: "avg", column: "region" }],
+        filters: [],
+        viz: { type: "bar", yFields: [] },
+      }),
+    /Cannot apply "avg" to column "region"/,
+  );
+});
+
+test("rejects date bucketing on a non-temporal column", () => {
+  assert.throws(
+    () =>
+      buildReportSql({
+        dataset: "sales",
+        dimensions: [{ column: "amount", transform: "day" }],
+        measures: [{ agg: "count" }],
+        filters: [],
+        viz: { type: "bar", yFields: [] },
+      }),
+    /Cannot apply "day" bucketing/,
+  );
+});
+
+test("allows date bucketing on a text column", () => {
+  const { sql } = buildReportSql({
+    dataset: "sales",
+    dimensions: [{ column: "region", transform: "year" }],
+    measures: [{ agg: "count" }],
+    filters: [],
+    viz: { type: "bar", yFields: [] },
+  });
+  assert.match(sql, /EXTRACT\(year FROM CAST\("region" AS TIMESTAMP\)\)/);
+});
+
 test("rejects columns not in the dataset catalog", () => {
   assert.throws(
     () =>
