@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import { meta } from "../db/metadata.js";
 import { withWriteLock } from "../db/duckdb.js";
 import { buildSelectList, curatedColumns, quoteIdent } from "./curation.js";
+import { type DatasetKey, getDatasetModel, seedDatasetDefaults } from "./model.js";
 import {
   type ColumnInfo,
   type FileFormat,
@@ -27,6 +28,12 @@ export interface Dataset {
   columns: ColumnInfo[];
   /** Physical columns of the underlying file(s), before curation. */
   rawColumns: ColumnInfo[];
+  /** Human description of the data source (seeded, then admin-editable). */
+  description: string | null;
+  /** Coarse grouping (CPU, Workload, I/O, …) for organising the picker. */
+  family: string | null;
+  /** Conformed join keys linking this dataset to others. */
+  keys: DatasetKey[];
   rowEstimate: number;
   createdAt: string;
 }
@@ -39,12 +46,15 @@ interface DatasetRow {
   kind: DatasetKind;
   columns: string;
   raw_columns: string | null;
+  description: string | null;
+  family: string | null;
   row_estimate: number;
   created_at: string;
 }
 
 function rowToDataset(r: DatasetRow): Dataset {
   const columns: ColumnInfo[] = JSON.parse(r.columns);
+  const model = getDatasetModel(r.name);
   return {
     id: r.id,
     name: r.name,
@@ -54,6 +64,9 @@ function rowToDataset(r: DatasetRow): Dataset {
     columns,
     // Older rows predate raw_columns; fall back to the curated columns.
     rawColumns: r.raw_columns ? JSON.parse(r.raw_columns) : columns,
+    description: model.description,
+    family: model.family,
+    keys: model.keys,
     rowEstimate: r.row_estimate,
     createdAt: r.created_at,
   };
@@ -126,6 +139,9 @@ export async function persistCuratedView(opts: {
       raw_columns: JSON.stringify(physical.columns),
       row_estimate: physical.rowEstimate,
     });
+
+  // Fill in description/family/keys defaults (no-op once an admin has edited).
+  seedDatasetDefaults(viewName, physical.columns);
 
   const row = meta.prepare("SELECT * FROM datasets WHERE name = ?").get(viewName) as DatasetRow;
   return rowToDataset(row);

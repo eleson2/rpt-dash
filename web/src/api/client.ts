@@ -7,6 +7,7 @@ import type {
   DashboardInput,
   Dataset,
   DatasetColumns,
+  DatasetModelInput,
   Metric,
   MetricInput,
   ParamDef,
@@ -56,6 +57,12 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ columns }),
     }),
+
+  saveDatasetModel: (name: string, model: DatasetModelInput) =>
+    http<{ dataset: Dataset }>(`/api/datasets/${encodeURIComponent(name)}/model`, {
+      method: "PUT",
+      body: JSON.stringify(model),
+    }).then((r) => r.dataset),
 
   listMetrics: () => http<{ metrics: Metric[] }>("/api/metrics").then((r) => r.metrics),
 

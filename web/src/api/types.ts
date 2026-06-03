@@ -28,6 +28,14 @@ export interface ColumnInfo {
   type: string;
 }
 
+export type KeyRole = "system" | "sysplex" | "time" | "interval" | "entity";
+
+export interface DatasetKey {
+  column: string;
+  role: KeyRole;
+  label?: string;
+}
+
 export interface Dataset {
   id: string;
   name: string;
@@ -39,8 +47,20 @@ export interface Dataset {
   columns: ColumnInfo[];
   /** Physical columns of the underlying file(s), before curation. */
   rawColumns: ColumnInfo[];
+  /** Human description of the data source. */
+  description: string | null;
+  /** Coarse grouping (CPU, Workload, I/O, …). */
+  family: string | null;
+  /** Conformed join keys linking this dataset to others. */
+  keys: DatasetKey[];
   rowEstimate: number;
   createdAt: string;
+}
+
+export interface DatasetModelInput {
+  description: string | null;
+  family: string | null;
+  keys: { column: string; role: KeyRole }[];
 }
 
 /** Per-column curation overlay: friendly label + visibility + order. */

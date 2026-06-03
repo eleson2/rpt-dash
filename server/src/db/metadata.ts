@@ -33,6 +33,16 @@ meta.exec(`
     PRIMARY KEY (dataset, column)
   );
 
+  -- Conformed join keys of a dataset: the columns that link it to others
+  -- (system/sysplex identity, time/interval). DuckDB can't model relationships
+  -- on views, so this lives in the catalog. Keyed by physical column name.
+  CREATE TABLE IF NOT EXISTS dataset_keys (
+    dataset TEXT NOT NULL,               -- DuckDB view name
+    column  TEXT NOT NULL,               -- physical column that is a join key
+    role    TEXT NOT NULL,               -- 'system' | 'sysplex' | 'time' | 'interval' | 'entity'
+    PRIMARY KEY (dataset, column)
+  );
+
   CREATE TABLE IF NOT EXISTS metrics (
     id          TEXT PRIMARY KEY,
     name        TEXT NOT NULL,
@@ -94,3 +104,8 @@ addColumnIfMissing("datasets", "raw_columns", "raw_columns TEXT");
 // per-type view or an uploaded file) shown in the UI; 'file' = an internal
 // per-file entry from discovery, hidden behind the combined view.
 addColumnIfMissing("datasets", "kind", "kind TEXT NOT NULL DEFAULT 'table'");
+
+// Human description and grouping (e.g. CPU, Workload, I/O) for a data source.
+// Seeded with sensible defaults on registration, then admin-editable.
+addColumnIfMissing("datasets", "description", "description TEXT");
+addColumnIfMissing("datasets", "family", "family TEXT");

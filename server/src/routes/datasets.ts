@@ -13,6 +13,7 @@ import {
   setCuration,
 } from "../ingest/curation.js";
 import { formatFromFilename } from "../ingest/introspect.js";
+import { KEY_ROLES, setDatasetModel } from "../ingest/model.js";
 import { predefinedReports } from "../predefined/registry.js";
 import { migrateVisualReports } from "../reports/migrate.js";
 import { requireAdmin, requireAuth } from "../auth/guards.js";
@@ -28,6 +29,14 @@ const curationBodySchema = z.object({
       }),
     )
     .min(1),
+});
+
+const modelBodySchema = z.object({
+  description: z.string().nullable().optional(),
+  family: z.string().nullable().optional(),
+  keys: z
+    .array(z.object({ column: z.string().min(1), role: z.enum(KEY_ROLES as [string, ...string[]]) }))
+    .default([]),
 });
 
 export async function datasetRoutes(app: FastifyInstance) {
@@ -106,6 +115,35 @@ export async function datasetRoutes(app: FastifyInstance) {
       const dataset = await recurateView(name);
       const migration = migrateVisualReports(name, renames);
       return { dataset, migration };
+    } catch (err) {
+      req.log.error(err);
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
+
+  // Describe a data source (admin): description, family, and conformed join
+  // keys. Pure catalog metadata — no view rebuild.
+  app.put("/api/datasets/:name/model", { preHandler: requireAdmin }, async (req, reply) => {
+    const { name } = req.params as { name: string };
+    const ds = listDatasets().find((d) => d.name === name);
+    if (!ds) return reply.code(404).send({ error: `Unknown dataset: ${name}` });
+
+    try {
+      const body = modelBodySchema.parse(req.body);
+      // Keys reference physical columns (stable across curation renames).
+      const physical = new Set(ds.rawColumns.map((c) => c.name));
+      for (const k of body.keys) {
+        if (!physical.has(k.column)) {
+          throw new Error(`Unknown column "${k.column}" in dataset ${name}`);
+        }
+      }
+      setDatasetModel(name, {
+        description: body.description ?? null,
+        family: body.family ?? null,
+        keys: body.keys.map((k) => ({ column: k.column, role: k.role as (typeof KEY_ROLES)[number] })),
+      });
+      const dataset = listDatasets().find((d) => d.name === name)!;
+      return { dataset };
     } catch (err) {
       req.log.error(err);
       return reply.code(400).send({ error: (err as Error).message });

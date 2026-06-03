@@ -115,10 +115,20 @@ export function ReportBuilder() {
             Data source
             <select value={dataset} onChange={(e) => onPickDataset(e.target.value)}>
               <option value="">— pick a data source —</option>
-              {datasets.data?.map((d) => (
-                <option key={d.id} value={d.name}>
-                  {d.name}
-                </option>
+              {Object.entries(
+                (datasets.data ?? []).reduce<Record<string, typeof datasets.data>>((groups, d) => {
+                  const fam = d.family ?? "Other";
+                  (groups[fam] ??= []).push(d);
+                  return groups;
+                }, {}),
+              ).map(([fam, items]) => (
+                <optgroup key={fam} label={fam}>
+                  {items!.map((d) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </label>
@@ -131,6 +141,10 @@ export function ReportBuilder() {
             </select>
           </label>
         </div>
+
+        {dataset && datasets.data?.find((d) => d.name === dataset)?.description && (
+          <p className="muted small">{datasets.data.find((d) => d.name === dataset)!.description}</p>
+        )}
 
         {dataset && (
           <>
